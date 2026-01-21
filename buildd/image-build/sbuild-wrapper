@@ -1,0 +1,51 @@
+#!/bin/bash
+
+##
+## THIS FILE IS UNDER PUPPET CONTROL. DON'T EDIT IT HERE.
+## USE: git clone git+ssh://$USER@puppet.debian.org/srv/puppet.debian.org/git/dsa-puppet.git
+##
+
+# Default values in sbuild
+ARCH="$(dpkg --print-architecture)"
+DIST="sid"
+
+# Parse all the arguments to get the architecture and the distribution
+while [ "$1" ]; do
+    case "$1" in
+        --arch=*)
+            ARCH="${1#--arch=}"
+            ;;
+        --dist=*)
+            DIST="${1#--dist=}"
+            ;;
+        -d)
+            DIST="$2"
+            ARGS+=("$1")
+            shift
+            ;;
+        *)
+            ;;
+    esac
+    ARGS+=("$1")
+    shift
+done
+
+# Compute the chroot file to use
+CHROOTFILE="/srv/chroot/rootfs.tar.zst"
+if ! test -f "$CHROOTFILE" ; then
+    echo "error: chroot file $CHROOTFILE missing"
+    exit 1
+fi
+
+PACKAGE=$(echo "${ARGS[-1]}" | cut -f1 -d_)
+case "${PACKAGE}" in
+    # Those packages need network access during build
+    debian-installer | debian-installer-netboot-images)
+        network="--enable-network"
+        ;;
+    *)
+        network="--no-enable-network"
+        ;;
+esac
+
+exec /usr/bin/sbuild --chroot-mode=unshare "$network" --chroot="$CHROOTFILE" "${REPOSITORIES[@]}" "${ARGS[@]}"

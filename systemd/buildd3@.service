@@ -1,0 +1,42 @@
+[Unit]
+Description=buildd daemon %i
+ConditionPathExists=/srv/buildd3/%i
+ConditionPathExists=/srv/buildd3/%i/gpg
+ConditionPathExists=/srv/buildd3/%i/ssh
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+Environment="SECCOMP_PROFILE=/srv/buildd/buildd_seccomp.json"
+Environment="MEMMOUNT=--mount=type=tmpfs,chown=true,dst=/srv/buildd"
+Environment="EXTRA_OPT="
+ExecStart=\
+  podman run --rm \
+  --name %i \
+  -v /srv/buildd3/rootfs.tar.zst:/srv/chroot/rootfs.tar.zst:ro \
+  -v /srv/buildd3/dupload.conf:/etc/dupload.conf:ro \
+  -v /srv/buildd3/buildd.conf:/etc/buildd.conf:ro \
+  -v /srv/buildd3/sbuild-wrapper:/usr/local/bin/sbuild \
+  -v /srv/buildd/sbuild.conf:/etc/sbuild/sbuild.conf:ro \
+  -v /srv/buildd3/%i/build:/home/buildd/build \
+  -v /srv/buildd3/%i/logs:/home/buildd/logs \
+  -v /srv/buildd3/%i/stats:/home/buildd/stats \
+  -v /srv/buildd3/%i/gpg:/home/buildd/.gnupg \
+  -v /srv/buildd3/%i/ssh:/home/buildd/.ssh \
+  $MEMMOUNT \
+  $EXTRA_OPT \
+  --hostname=%i \
+  --security-opt="apparmor=unconfined" \
+  --security-opt="unmask=/proc/*" \
+  --security-opt="seccomp=${SECCOMP_PROFILE}" \
+  --cap-add=cap_sys_admin \
+  --pids-limit=-1 \
+  --stop-signal=SIGTERM \
+  --stop-timeout=30 \
+  localhost/debian-buildd \
+  bash -c '(while true; do ssh -S buildd.debian.org.ssh -MN wbadm2@buildd.internal.apernet.io; sleep 30; done)& exec "$@"' dummy \
+  ./pybuildd/buildd.py
+ExecReload=podman kill --signal USR1 %i
+ExecStop=podman stop %i
+ExecStopPost=-podman container rm -f %i 
+TimeoutStopSec=60

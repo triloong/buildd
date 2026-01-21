@@ -1,0 +1,6 @@
+build/
+gpg/
+logs/
+ssh/
+stats/
+rootfs.tar.zst
