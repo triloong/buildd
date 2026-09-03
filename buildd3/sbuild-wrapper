@@ -77,47 +77,14 @@ case "${DIST}" in
     ;;
     trixie-security)
         repositories_add_entry trixie-security -security
+	if [ "${PACKAGE}" = "chromium" ]; then
+		REPOSITORIES+=( --extra-repository="deb [signed-by=/etc/apt/keyrings/debian-trixie-loong64.gpg] http://deb.internal.apernet.io/debian-loong64 trixie-proposed-updates main contrib" )
+	fi
     ;;
     trixie-backports-sloppy)
         repositories_add_entry trixie-backports
         repositories_add_entry trixie-backports-sloppy
     ;;
 esac
-
-if [ "${PACKAGE}" = "chromium" ]; then
-    version=$(echo "${ARGS[-1]}" | cut -f2- -d_)
-    if [[ "$version" != *+~loong64+* ]]; then
-        orig_args=("${ARGS[@]}")
-        arch_specified=$ARCH
-        ARGS=()
-        for arg in "${orig_args[@]}"; do
-             case "$arg" in
-                --arch-all )
-                    arch_specified="all"
-                    ;;
-                --arch-any | --no-arch-any | --no-arch-all | --source | --force-orig-source | --binNMU=* | --append-to-version=* | --make-binNMU=* | --starting-build-commands=*)
-                    :
-                    ;;
-                *)
-                    ARGS+=("$arg")
-                    ;;
-            esac
-        done
-        ARGS+=(
-            "--no-arch-any" "--no-arch-all" "--source" "--force-orig-source"
-            "--binNMU=0" "--append-to-version=+~loong64+1"
-            "--make-binNMU=Disable static link to libc++ for loong64"
-            "--starting-build-commands=cd %p && sed -i '1 s/-security;/;/; 0,/^ --/{/^ --/ s/  .*\$/  '\"\$(dpkg-parsechangelog -S Date --offset=1 --count=1)\"'/; /no source changes/d}' debian/changelog && echo '/Td6WFoAAATm1rRGBMD6ArQEIQEWAAAAAAAAAHvqgK3gAjMBcl0AMhpJCcL8EX1Q3gpPR9ZEoWylwO753cfp6UUqmMcoAw024VP6LxiHhmCGMK9msEpszIVnn18nKCHkjQ9hwJPBZv2xLBW0R5FrHFw1wmcBxc9cBIpVNGOhO0wfiiiKBu1udyPgIfvArggFX9bz+zc3DaQT8qAtZmzT+QwGuuiZzHcgzHJI7y3AKFvNDStLSdfwTSthQk42a+0aq39xp7xR8DIeEWMgiPDQwhmjsnVkq8KHNf66QGJaNcQX+ggobkeXmECgaCgLNA/DBJYIySxHPBPZ/qT2R+4xcX3ZbB64e39KG6XHheG3kj3YT0Sk/02SKmDEZLuD7LyLJs/zoQuvwExLUEK0frEzfgcOcBkI2amRfb6tflSw6v+xCVnSRJWxsbtKuQeyfeyRg6vi7JNlEk9+a5rBcLQy90vtIa1EptBAunl9NkzmSNULmleIANXStAEW71sj6NpcxFkJHdRBCqVOSO2KNcIPJ0Ywx+h6Z/0R8gAAABsfWnvwKjlFAAGWA7QEAABCKtPascRn+wIAAAAABFla' | base64 -d | xzcat | patch -p1"
-        )
-        /usr/bin/sbuild --chroot-mode=unshare "$network" --chroot="$CHROOTFILE" "${REPOSITORIES[@]}" "${ARGS[@]}"
-        rc="$?"
-        if [ "$rc" -ne 0 ]; then
-            exit "$rc"
-        fi
-        epochless_binary_version=${version#*:}
-        mv "${PACKAGE}_${epochless_binary_version}+~loong64+1_source${DPkgFileSuffix}.changes" "${PACKAGE}_${epochless_binary_version}_${arch_specified}${DPkgFileSuffix}.changes"
-        exit "$rc"
-    fi
-fi
 
 exec /usr/bin/sbuild --chroot-mode=unshare "$network" --chroot="$CHROOTFILE" "${REPOSITORIES[@]}" "${ARGS[@]}"
