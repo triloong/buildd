@@ -77,9 +77,6 @@ case "${DIST}" in
     ;;
     trixie-security)
         repositories_add_entry trixie-security -security
-	if [ "${PACKAGE}" = "chromium" ]; then
-		REPOSITORIES+=( --extra-repository="deb [signed-by=/etc/apt/keyrings/debian-trixie-loong64.gpg] http://deb.internal.apernet.io/debian-loong64 trixie-proposed-updates main contrib" )
-	fi
     ;;
     trixie-backports-sloppy)
         repositories_add_entry trixie-backports
