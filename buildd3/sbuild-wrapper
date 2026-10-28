@@ -84,4 +84,8 @@ case "${DIST}" in
     ;;
 esac
 
+if [ "${PACKAGE}" = "thunderbird" ]; then
+   ARGS+=(--debbuildopt=--rules-file="env RUSTFLAGS=-Ctarget-feature=-relax DEB_CFLAGS_APPEND=-mcmodel=medium DEB_CXXFLAGS_APPEND=-mcmodel=medium debian/rules")
+fi
+
 exec /usr/bin/sbuild --chroot-mode=unshare "$network" --chroot="$CHROOTFILE" "${REPOSITORIES[@]}" "${ARGS[@]}"
